@@ -1,0 +1,3 @@
+#!/bin/bash
+
+uv run locust -f locustfile.py --class-picker --host $1

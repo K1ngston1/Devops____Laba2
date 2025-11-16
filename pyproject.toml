@@ -1,6 +1,6 @@
 [project]
 name = "hearmypaper-server"
-version = "0.1.0"
+version = "1.0.0"
 description = "HearMyPaper server"
 requires-python = ">=3.13"
 dependencies = [
@@ -18,7 +18,9 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "locust>=2.41.6",
     "mypy>=1.18.2",
     "pre-commit>=4.3.0",
+    "requests>=2.32.5",
     "ruff>=0.13.1",
 ]
