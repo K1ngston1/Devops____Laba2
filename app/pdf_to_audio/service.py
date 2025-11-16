@@ -11,6 +11,7 @@ from app.shared.utils.crypto import (
     encrypt_with_ed25519_public_key,
     decrypt_with_ed25519_private_key,
 )
+from app.shared.utils.cbor import ensure_cbor_bytes
 from app.credentials.service import load_server_private_key
 
 
@@ -40,19 +41,17 @@ def convert_pdf_to_audio_bytes(
 ) -> dict[str, bytes]:
     server_private_key = load_server_private_key(db=db)
 
-    encrypted_file_bytes = cbor_data["encrypted_file"]
-    encrypted_aes_key_data = cbor_data["encrypted_aes_key"]
+    encrypted_file_bytes = ensure_cbor_bytes(
+        cbor_data["encrypted_file"], "encrypted_file"
+    )
+    encrypted_aes_key_bytes = ensure_cbor_bytes(
+        cbor_data["encrypted_aes_key"], "encrypted_aes_key"
+    )
     speed = int(cbor_data.get("speed", 140))
-
-    if isinstance(encrypted_aes_key_data, str):
-        encrypted_aes_key_bytes = base64.b64decode(encrypted_aes_key_data)
-    else:
-        encrypted_aes_key_bytes = encrypted_aes_key_data
 
     aes_key = decrypt_with_ed25519_private_key(
         encrypted_aes_key_bytes, server_private_key
     )
-
     pdf_bytes = decrypt_with_aes(encrypted_file_bytes, aes_key)
     text = extract_text_from_pdf(pdf_bytes)
 
