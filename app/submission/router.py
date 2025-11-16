@@ -8,6 +8,7 @@ from app.auth.dependencies import CurrentSubjectDep
 from app.auth.enums import AccessLevel
 from app.auth.decorators import authorize
 from app.audit.decorators import audit
+from app.shared.utils.cbor import ensure_cbor_bytes
 
 from .dto import SubmissionResponse, SubmissionHashResponse
 from . import service
@@ -28,7 +29,9 @@ async def create_submission(
         data = cbor2.loads(body)
         project_id = data["project_id"]
         title = data["title"]
-        encrypted_content = data["encrypted_content"]
+        encrypted_content = ensure_cbor_bytes(
+            data["encrypted_content"], "encrypted_content"
+        )
 
         submission_id = service.create_submission(
             project_id=project_id,
