@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+"""
+Test Environment Management Script
+
+Manages test data for load testing by calling admin endpoints to set up or tear down
+test users, projects, and other fixtures.
+
+Usage:
+    python test-env.py up --host=http://localhost:8000 --credentials=path/to/admin.bin
+    python test-env.py down --host=http://localhost:8000 --credentials=path/to/admin.bin
+"""
+
+import argparse
+import getpass
+import json
+import os
+import sys
+from pathlib import Path
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+
+try:
+    import requests
+except ImportError:
+    print("Error: requests library is required. Install with: pip install requests")
+    sys.exit(1)
+
+
+def decrypt_credentials(credentials_path: str, password: str) -> tuple[int, str]:
+    """
+    Decrypt admin credentials file using PBKDF2 + AES-256-GCM.
+
+    Args:
+        credentials_path: Path to encrypted credentials file
+        password: Password to decrypt the file
+
+    Returns:
+        Tuple of (user_id, private_key_hex)
+    """
+    try:
+        with open(credentials_path, "rb") as f:
+            encrypted_data = f.read()
+
+        salt = encrypted_data[:16]
+        iv = encrypted_data[16:28]
+        ciphertext = encrypted_data[28:-16]
+        tag = encrypted_data[-16:]
+
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=65536,
+            backend=default_backend(),
+        )
+        key = kdf.derive(password.encode("utf-8"))
+
+        decryptor = Cipher(
+            algorithms.AES(key), modes.GCM(iv, tag), backend=default_backend()
+        ).decryptor()
+
+        plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+        plaintext_str = plaintext.decode("utf-8")
+
+        user_id_str, private_key_hex = plaintext_str.split(",", 1)
+        return int(user_id_str), private_key_hex
+
+    except Exception as e:
+        print(f"Error decrypting credentials: {e}")
+        sys.exit(1)
+
+
+def get_auth_token(host: str, user_id: int, private_key_hex: str) -> str:
+    """
+    Authenticate with the server and get JWT token.
+
+    Args:
+        host: Server URL
+        user_id: Admin user ID
+        private_key_hex: Admin private key in hex format
+
+    Returns:
+        JWT token
+    """
+    from common import sign_challenge
+
+    host = host.rstrip("/")
+
+    try:
+        challenge_response = requests.post(
+            f"{host}/auth/challenge", json={"user_id": user_id}
+        )
+        challenge_response.raise_for_status()
+        challenge = challenge_response.json()["challenge"]
+
+        signature = sign_challenge(challenge, private_key_hex)
+
+        login_response = requests.post(
+            f"{host}/auth/login",
+            json={"user_id": user_id, "challenge": challenge, "signature": signature},
+        )
+        login_response.raise_for_status()
+        return login_response.json()["token"]
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error: Authentication failed - {e}")
+        sys.exit(1)
+
+
+def call_admin_endpoint(host: str, endpoint: str, token: str) -> dict:
+    """
+    Call an admin endpoint with authentication.
+
+    Args:
+        host: Server URL
+        endpoint: Endpoint path (e.g., /admin/load-test/up)
+        token: JWT authentication token
+
+    Returns:
+        JSON response
+    """
+    url = f"{host.rstrip('/')}{endpoint}"
+    headers = {"Authorization": f"Bearer {token}"}
+
+    try:
+        response = requests.post(url, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error calling endpoint {endpoint}: {e}")
+        if hasattr(e, "response") and e.response is not None:
+            print(f"Response: {e.response.text}")
+        sys.exit(1)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Manage test environment for load testing"
+    )
+    parser.add_argument(
+        "command",
+        choices=["up", "down"],
+        help="up: create test data, down: remove test data",
+    )
+    parser.add_argument(
+        "--credentials", "-c", required=True, help="Path to admin credentials file"
+    )
+    parser.add_argument(
+        "--host", required=True, help="Server URL (e.g., http://localhost:8000)"
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        default="data/test_data.json",
+        help="Output file for test data (default: data/test_data.json)",
+    )
+
+    args = parser.parse_args()
+
+    if not os.path.exists(args.credentials):
+        print(f"Error: Credentials file not found: {args.credentials}")
+        sys.exit(1)
+
+    password = getpass.getpass("Enter credentials password: ")
+
+    print("Decrypting credentials...")
+    user_id, private_key_hex = decrypt_credentials(args.credentials, password)
+
+    print("Authenticating...")
+    token = get_auth_token(args.host, user_id, private_key_hex)
+
+    endpoint = f"/admin/load-test/{args.command}"
+    print(f"Calling {endpoint}...")
+
+    response = call_admin_endpoint(args.host, endpoint, token)
+
+    if args.command == "up":
+        output_path = Path(args.output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(output_path, "w") as f:
+            json.dump(response, f, indent=2)
+
+        print(f"✓ Test data created and saved to {output_path}")
+        print(f"  Students: {len(response.get('students', []))}")
+        print(f"  Instructors: {len(response.get('instructors', []))}")
+        print(f"  Projects: {len(response.get('projects', []))}")
+    else:
+        print("✓ Test data removed successfully")
+        if args.output and os.path.exists(args.output):
+            os.remove(args.output)
+            print(f"  Removed {args.output}")
+
+
+if __name__ == "__main__":
+    main()

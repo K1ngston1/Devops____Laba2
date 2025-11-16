@@ -220,3 +220,6 @@ __marimo__/
 
 # Secrets
 secrets/
+
+# Locust data
+locust/data/
