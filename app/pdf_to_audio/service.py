@@ -183,8 +183,13 @@ def get_conversion_status(*, task_uuid: str, user_id: int) -> dict:
         if task["user_id"] != user_id:
             raise ValueError("Unauthorized access to task")
 
+        has_error = "error" in task
+        error_message = task.get("error") if has_error else None
+
         return {
             "is_done": task["is_done"],
+            "has_error": has_error,
+            "error_message": error_message,
             "encrypted_aes_key": None,
         }
 
