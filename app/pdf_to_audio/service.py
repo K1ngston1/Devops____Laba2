@@ -14,7 +14,6 @@ from app.shared.utils.crypto import (
 )
 from app.shared.utils.cbor import ensure_cbor_bytes
 
-# Global state for task management
 is_converter_busy = False
 conversion_tasks: dict[str, dict] = {}
 converter_lock = threading.Lock()
@@ -72,12 +71,10 @@ def convert_pdf_to_audio_bytes(
         if is_converter_busy:
             return {"is_success": False}
 
-        # Get the AES key from the task (we already have it!)
         aes_key = conversion_tasks[task_uuid]["aes_key"]
 
         is_converter_busy = True
 
-    # Start conversion in background thread
     def conversion_worker():
         global is_converter_busy
         try:
@@ -86,7 +83,6 @@ def convert_pdf_to_audio_bytes(
             )
             speed = int(cbor_data.get("speed", 140))
 
-            # Use the AES key we already have from the upload key phase
             pdf_bytes = decrypt_with_aes(encrypted_file_bytes, aes_key)
             text = extract_text_from_pdf(pdf_bytes)
 
@@ -97,20 +93,17 @@ def convert_pdf_to_audio_bytes(
             audio_aes_key = generate_aes_key()
             encrypted_audio = encrypt_with_aes(audio_bytes, audio_aes_key)
 
-            # Save to database
             db.query("""
                 INSERT INTO conversions (uuid, encrypted_content)
                 VALUES (:uuid, :encrypted_content)
             """).bind(uuid=task_uuid, encrypted_content=encrypted_audio).execute()
 
-            # Update task with audio key
             with converter_lock:
                 if task_uuid in conversion_tasks:
                     conversion_tasks[task_uuid]["audio_aes_key"] = audio_aes_key
                     conversion_tasks[task_uuid]["is_done"] = True
 
         except Exception as e:
-            # Mark task as failed
             with converter_lock:
                 if task_uuid in conversion_tasks:
                     conversion_tasks[task_uuid]["is_done"] = True
@@ -230,7 +223,6 @@ def get_converted_audio(*, task_uuid: str, user_id: int, db: SqlRunner) -> dict:
 
     encrypted_audio = bytes(result["encrypted_content"])
 
-    # Get user's public key to encrypt the audio key
     user_public_key_row = (
         db.query("""
         SELECT public_key
@@ -249,7 +241,11 @@ def get_converted_audio(*, task_uuid: str, user_id: int, db: SqlRunner) -> dict:
         audio_aes_key, user_public_key_bytes
     )
 
-    # Clean up task after retrieval
+    db.query("""
+        DELETE FROM conversions
+        WHERE uuid = :uuid
+    """).bind(uuid=task_uuid).execute()
+
     with converter_lock:
         if task_uuid in conversion_tasks:
             del conversion_tasks[task_uuid]
