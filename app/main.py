@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
-from redis import asyncio as aioredis
+from redis import asyncio as aioredis  # type: ignore
 
 from app.auth.router import router as auth_router
 from app.project.router import router as project_router
