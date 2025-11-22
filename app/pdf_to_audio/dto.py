@@ -23,6 +23,8 @@ class ConvertResponse(BaseModel):
 
 class ConversionStatusResponse(BaseModel):
     is_done: bool
+    has_error: bool = False
+    error_message: str | None = None
     encrypted_aes_key: str | None = None
 
 
