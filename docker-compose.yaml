@@ -35,10 +35,11 @@ services:
     container_name: hmp-redis
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes
+    command: redis-server --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     restart: unless-stopped
+    env_file: .env
 
   pgadmin:
     image: dpage/pgadmin4:latest
