@@ -2,6 +2,7 @@ import subprocess
 import base64
 import uuid
 import threading
+import time
 import fitz  # type: ignore
 from langdetect import detect  # type: ignore
 
@@ -78,22 +79,39 @@ def convert_pdf_to_audio_bytes(
 
     def conversion_worker():
         global is_converter_busy
+        print(f"[DEBUG] conversion_worker: Started for task_uuid={task_uuid}")
         try:
+            # Small delay to let the main thread respond
+            time.sleep(0.1)
+
+            print("[DEBUG] conversion_worker: Decrypting PDF")
             encrypted_file_bytes = ensure_cbor_bytes(
                 cbor_data["encrypted_file"], "encrypted_file"
             )
             speed = int(cbor_data.get("speed", 140))
 
             pdf_bytes = decrypt_with_aes(encrypted_file_bytes, aes_key)
+
+            # Brief pause after decryption
+            time.sleep(0.1)
+
+            print("[DEBUG] conversion_worker: Extracting text from PDF")
             text = extract_text_from_pdf(pdf_bytes)
 
             if not text.strip():
                 raise ValueError("No text found in PDF or PDF is empty")
 
+            print("[DEBUG] conversion_worker: Converting text to audio")
             audio_bytes = convert_text_to_audio(text, speed=speed)
+
+            # Brief pause after conversion
+            time.sleep(0.1)
+
+            print("[DEBUG] conversion_worker: Encrypting audio")
             audio_aes_key = generate_aes_key()
             encrypted_audio = encrypt_with_aes(audio_bytes, audio_aes_key)
 
+            print("[DEBUG] conversion_worker: Saving to database")
             # Create a new database connection for this thread
             with get_db_engine(DataSource.POSTGRES).begin() as connection:
                 worker_db = SqlRunner(connection=connection)
@@ -102,12 +120,14 @@ def convert_pdf_to_audio_bytes(
                     VALUES (:uuid, :encrypted_content)
                 """).bind(uuid=task_uuid, encrypted_content=encrypted_audio).execute()
 
+            print("[DEBUG] conversion_worker: Success! Setting is_done=True")
             with converter_lock:
                 if task_uuid in conversion_tasks:
                     conversion_tasks[task_uuid]["audio_aes_key"] = audio_aes_key
                     conversion_tasks[task_uuid]["is_done"] = True
 
         except Exception as e:
+            print(f"[DEBUG] conversion_worker: ERROR - {str(e)}")
             with converter_lock:
                 if task_uuid in conversion_tasks:
                     conversion_tasks[task_uuid]["is_done"] = True
@@ -115,6 +135,7 @@ def convert_pdf_to_audio_bytes(
         finally:
             with converter_lock:
                 is_converter_busy = False
+                print("[DEBUG] conversion_worker: Finished, is_converter_busy=False")
 
     thread = threading.Thread(target=conversion_worker, daemon=True)
     thread.start()
@@ -153,7 +174,12 @@ def convert_text_to_audio(text: str, speed: int = 140) -> bytes:
     lang = _detect_language(text)
     espeak_voice = _espeak_voice_for_lang(lang)
 
+    # Use nice to lower CPU priority (nice value 10 = lower priority)
+    # This prevents the conversion from hogging CPU
     cmd = [
+        "nice",
+        "-n",
+        "10",
         "espeak-ng",
         "--stdout",
         "-v",
@@ -164,9 +190,15 @@ def convert_text_to_audio(text: str, speed: int = 140) -> bytes:
     ]
     try:
         proc = subprocess.run(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            timeout=300,  # 5 minute timeout to prevent hanging
         )
         return proc.stdout
+    except subprocess.TimeoutExpired:
+        raise ValueError("Text-to-speech conversion timed out")
     except subprocess.CalledProcessError as e:
         raise ValueError(f"Text-to-speech conversion failed: {e}")
 

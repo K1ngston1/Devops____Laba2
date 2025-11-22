@@ -29,7 +29,7 @@ Usage Examples:
 """
 
 # Import all user classes
-from locust.core.users import (
+from core.users import (
     StudentUser,
     InstructorUser,
     SpikeStudentUser,
@@ -37,7 +37,7 @@ from locust.core.users import (
 )
 
 # Import all load shapes
-from locust.core.shapes import (
+from core.shapes import (
     AverageLoadShape,
     StressLoadShape,
     SpikeLoadShape,
