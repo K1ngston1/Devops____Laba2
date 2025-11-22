@@ -13,6 +13,7 @@ from app.shared.utils.crypto import (
     encrypt_with_ed25519_public_key,
 )
 from app.shared.utils.cbor import ensure_cbor_bytes
+from app.shared.config.db import get_db_engine, DataSource
 
 is_converter_busy = False
 conversion_tasks: dict[str, dict] = {}
@@ -93,10 +94,13 @@ def convert_pdf_to_audio_bytes(
             audio_aes_key = generate_aes_key()
             encrypted_audio = encrypt_with_aes(audio_bytes, audio_aes_key)
 
-            db.query("""
-                INSERT INTO conversions (uuid, encrypted_content)
-                VALUES (:uuid, :encrypted_content)
-            """).bind(uuid=task_uuid, encrypted_content=encrypted_audio).execute()
+            # Create a new database connection for this thread
+            with get_db_engine(DataSource.POSTGRES).begin() as connection:
+                worker_db = SqlRunner(connection=connection)
+                worker_db.query("""
+                    INSERT INTO conversions (uuid, encrypted_content)
+                    VALUES (:uuid, :encrypted_content)
+                """).bind(uuid=task_uuid, encrypted_content=encrypted_audio).execute()
 
             with converter_lock:
                 if task_uuid in conversion_tasks:
