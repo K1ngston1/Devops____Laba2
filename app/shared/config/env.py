@@ -17,10 +17,19 @@ class EnvSettings(BaseSettings):
 
     server_private_key_password: str
 
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_db: int = 0
+
     @computed_field  # type: ignore
     @property
     def postgres_url(self) -> str:
         return f"postgresql+psycopg2://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+
+    @computed_field  # type: ignore
+    @property
+    def redis_url(self) -> str:
+        return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
 
 env_settings = EnvSettings()  # type: ignore
