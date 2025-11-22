@@ -1,5 +1,6 @@
 from typing import Annotated
 from fastapi import APIRouter, Path
+from fastapi_cache.decorator import cache
 
 from app.shared.dependencies.db import PostgresRunnerDep
 from app.auth.dependencies import CurrentSubjectDep
@@ -24,6 +25,7 @@ router = APIRouter()
 @router.get("/")
 @audit()
 @authorize(AccessLevel.CONTROLLED)
+@cache(expire=60)
 async def read_projects(
     db: PostgresRunnerDep, subject: CurrentSubjectDep
 ) -> list[ProjectListResponse]:
@@ -49,6 +51,7 @@ async def read_projects(
 @router.get("/{id}")
 @audit()
 @authorize(AccessLevel.CONTROLLED)
+@cache(expire=60)
 async def read_project(
     id: Annotated[int, Path()], db: PostgresRunnerDep, subject: CurrentSubjectDep
 ) -> ProjectResponse:

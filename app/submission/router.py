@@ -2,6 +2,7 @@ from typing import Annotated
 import cbor2
 from fastapi import APIRouter, Body, Query, Request
 from fastapi.responses import Response as FastAPIResponse
+from fastapi_cache.decorator import cache
 
 from app.shared.dependencies.db import PostgresRunnerDep
 from app.auth.dependencies import CurrentSubjectDep
@@ -61,6 +62,7 @@ async def delete_submission(
 @router.get("/")
 @audit()
 @authorize(AccessLevel.RESTRICTED)
+@cache(expire=30)
 async def read_submissions(
     db: PostgresRunnerDep, subject: CurrentSubjectDep, request: Request
 ) -> list[SubmissionResponse]:
@@ -74,6 +76,7 @@ async def read_submissions(
 @router.get("/instructor_key")
 @audit()
 @authorize(AccessLevel.UNCLASSIFIED)
+@cache(expire=300)
 async def read_instructor_key(
     project_id: Annotated[int, Query()],
     db: PostgresRunnerDep,

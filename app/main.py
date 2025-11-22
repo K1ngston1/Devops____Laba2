@@ -1,4 +1,8 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
+from redis import asyncio as aioredis  # type: ignore
 
 from app.auth.router import router as auth_router
 from app.project.router import router as project_router
@@ -6,8 +10,19 @@ from app.audit.router import router as audit_router
 from app.pdf_to_audio.router import router as pdf_to_audio_router
 from app.submission.router import router as submission_router
 from app.admin.router import router as admin_router
+from app.shared.config.env import env_settings
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    redis = aioredis.from_url(
+        env_settings.redis_url, encoding="utf-8", decode_responses=True
+    )
+    FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(project_router, prefix="/project", tags=["project"])
