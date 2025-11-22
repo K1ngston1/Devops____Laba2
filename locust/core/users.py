@@ -191,14 +191,8 @@ class BaseInstructorUser(BaseUser):
 
     @task(1)
     def convert_to_audio(self):
-        # Get server public key
-        server_key_response = self.make_request(
-            "GET", "/credentials/public-key", name="/credentials/public-key [get]"
-        )
-        if server_key_response.status_code != 200:
-            return
+        import time
 
-        # Get upload key (encrypted AES key for this user)
         upload_key_response = self.make_request(
             "GET", "/pdf-to-audio/upload-key", name="/pdf-to-audio/upload-key [get]"
         )
@@ -216,13 +210,17 @@ class BaseInstructorUser(BaseUser):
             import secrets
 
             upload_key_data = upload_key_response.json()
-            encrypted_aes_key_b64 = upload_key_data.get("encrypted_aes_key")
-            server_public_key_b64 = server_key_response.json().get("public_key")
+            is_success = upload_key_data.get("is_success")
 
-            if not encrypted_aes_key_b64 or not server_public_key_b64:
+            if not is_success:
                 return
 
-            # Decrypt the AES key with instructor's private key (using PBKDF2 approach from crypto.py)
+            encrypted_aes_key_b64 = upload_key_data.get("encrypted_aes_key")
+            task_uuid = upload_key_data.get("task_uuid")
+
+            if not encrypted_aes_key_b64 or not task_uuid:
+                return
+
             instructor_private_key = Ed25519PrivateKey.from_private_bytes(
                 bytes.fromhex(self.user_data["private_key"])
             )
@@ -230,7 +228,6 @@ class BaseInstructorUser(BaseUser):
                 instructor_private_key.public_key().public_bytes_raw()
             )
 
-            # Derive decryption key
             kdf = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),
                 length=32,
@@ -240,7 +237,6 @@ class BaseInstructorUser(BaseUser):
             )
             derived_key = kdf.derive(instructor_public_key_bytes)
 
-            # Decrypt AES key
             encrypted_aes_key = base64.b64decode(encrypted_aes_key_b64)
             if len(encrypted_aes_key) < 12 + 16:
                 return
@@ -256,7 +252,6 @@ class BaseInstructorUser(BaseUser):
             ).decryptor()
             aes_key = decryptor.update(ciphertext) + decryptor.finalize()
 
-            # Get a random PDF and encrypt it with the AES key (AES-GCM)
             pdf_content = get_random_submission_file()
 
             iv_pdf = secrets.token_bytes(12)
@@ -266,45 +261,51 @@ class BaseInstructorUser(BaseUser):
             ciphertext_pdf = encryptor.update(pdf_content) + encryptor.finalize()
             encrypted_pdf = iv_pdf + ciphertext_pdf + encryptor.tag
 
-            # Encrypt AES key with server's public key (using PBKDF2 approach)
-            server_public_key_bytes = base64.b64decode(server_public_key_b64)
-
-            kdf_server = PBKDF2HMAC(
-                algorithm=hashes.SHA256(),
-                length=32,
-                salt=server_public_key_bytes[:16],
-                iterations=65536,
-                backend=default_backend(),
-            )
-            server_derived_key = kdf_server.derive(server_public_key_bytes)
-
-            # Encrypt AES key for server
-            iv_key = secrets.token_bytes(12)
-            encryptor_key = Cipher(
-                algorithms.AES(server_derived_key),
-                modes.GCM(iv_key),
-                backend=default_backend(),
-            ).encryptor()
-            ciphertext_key = encryptor_key.update(aes_key) + encryptor_key.finalize()
-            encrypted_aes_key_for_server = iv_key + ciphertext_key + encryptor_key.tag
-
             conversion_data = {
                 "encrypted_file": encrypted_pdf,
-                "encrypted_aes_key": encrypted_aes_key_for_server,
                 "speed": 140,
+                "task_uuid": task_uuid,
             }
 
-            with self.client.post(
+            trigger_response = self.make_request(
+                "POST",
                 "/pdf-to-audio/execute",
                 data=cbor2.dumps(conversion_data),
                 headers=self.get_headers("application/cbor"),
-                name="/pdf-to-audio/execute [convert]",
-                catch_response=True,
-            ) as response:
-                if response.status_code == 200:
-                    response.success()
-                else:
-                    response.failure(f"Conversion failed: {response.status_code}")
+                name="/pdf-to-audio/execute [trigger]",
+            )
+
+            if trigger_response.status_code != 200:
+                return
+
+            trigger_data = trigger_response.json()
+            if not trigger_data.get("is_success"):
+                return
+
+            max_attempts = 24
+            for attempt in range(max_attempts):
+                time.sleep(5)
+
+                status_response = self.make_request(
+                    "GET",
+                    f"/pdf-to-audio/conversion-status/{task_uuid}",
+                    name="/pdf-to-audio/conversion-status [poll]",
+                )
+
+                if status_response.status_code != 200:
+                    break
+
+                status_data = status_response.json()
+                if status_data.get("is_done"):
+                    audio_response = self.make_request(
+                        "GET",
+                        f"/pdf-to-audio/converted-audio/{task_uuid}",
+                        name="/pdf-to-audio/converted-audio [download]",
+                    )
+
+                    if audio_response.status_code == 200:
+                        break
+
         except Exception:
             pass
 
