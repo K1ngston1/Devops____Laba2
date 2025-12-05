@@ -77,7 +77,7 @@ async def read_submissions(
 @audit()
 @authorize(AccessLevel.UNCLASSIFIED)
 async def read_instructor_key(
-    project_id: Annotated[int, Query()],
+    project_id: Annotated[str, Query()],
     db: PostgresRunnerDep,
     subject: CurrentSubjectDep,
     request: Request,
