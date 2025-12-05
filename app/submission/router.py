@@ -76,7 +76,6 @@ async def read_submissions(
 @router.get("/instructor_key")
 @audit()
 @authorize(AccessLevel.UNCLASSIFIED)
-@cache(expire=300)
 async def read_instructor_key(
     project_id: Annotated[int, Query()],
     db: PostgresRunnerDep,
