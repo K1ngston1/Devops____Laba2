@@ -45,6 +45,6 @@ def get_submission_content(submission_id: int, *, db: SqlRunner) -> bytes:
     return repository.get_submission_content(submission_id, db=db)
 
 
-def get_instructor_key(project_id: int, *, db: SqlRunner) -> str:
+def get_instructor_key(project_id: str, *, db: SqlRunner) -> str:
     key_bytes = repository.get_instructor_public_key(project_id, db=db)
     return base64.b64encode(key_bytes).decode("utf-8")
