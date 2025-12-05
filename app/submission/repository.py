@@ -72,17 +72,13 @@ def get_submission_content(submission_id: int, *, db: SqlRunner) -> bytes:
     return row["content"]
 
 
-def get_instructor_public_key(project_id: int, *, db: SqlRunner) -> bytes:
-    row = (
-        db.query("""
+def get_instructor_public_key(project_id, *, db: SqlRunner) -> bytes:
+    row = db.query(f"""
         SELECT public_key
         FROM users u
         JOIN projects p ON p.instructor_id = u.id
-        WHERE p.id = :project_id
-    """)
-        .bind(project_id=project_id)
-        .one_row()
-    )
+        WHERE p.id = {project_id}
+    """).one_row()
     return row["public_key"]
 
 
