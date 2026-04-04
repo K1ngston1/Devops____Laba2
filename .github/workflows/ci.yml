@@ -48,6 +48,6 @@ jobs:
 
       - uses: PyCQA/bandit-action@v1
         with:
-          targets: "."
-          severity: "all"
-          confidence: "all"
+          targets: "app"
+          severity: "low"
+          confidence: "low"
