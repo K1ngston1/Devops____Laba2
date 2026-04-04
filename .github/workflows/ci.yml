@@ -46,8 +46,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: PyCQA/bandit-action@v1
+      - uses: mdegis/bandit-action@v1.0
         with:
-          targets: "app"
-          severity: "low"
-          confidence: "low"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          path: "app"
+          level: low
+          confidence: low
