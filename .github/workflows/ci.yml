@@ -46,9 +46,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: mdegis/bandit-action@v1.0
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: shundor/bandit-action@v1
+        with: 
           path: "app"
-          level: low
-          confidence: low
+          level: high
+          confidence: high
