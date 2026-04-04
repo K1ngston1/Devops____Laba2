@@ -6,7 +6,8 @@ services:
     container_name: hmp-api
     env_file: .env
     environment:
-      - SERVER_PRIVATE_KEY_PASSWORD=${SERVER_PRIVATE_KEY_PASSWORD}
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
     ports:
       - "8000:8000"
     volumes:
