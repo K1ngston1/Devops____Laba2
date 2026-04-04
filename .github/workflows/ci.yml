@@ -41,12 +41,12 @@ jobs:
 
   analyze:
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: brunohaf/action-bandit@v1
+      - name: Perform Bandit Analysis
+        uses: PyCQA/bandit-action@v1
         with:
-          github_token: ${{ secrets.github_token }}
-          reporter: github-pr-review
-          level: warning
-          fail_on_error: true
+          python-version: "3.13"
+          severity: medium
+          confidence: medium
