@@ -1,3 +1,4 @@
+from functools import lru_cache
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -32,4 +33,6 @@ class EnvSettings(BaseSettings):
         return f"redis://{self.redis_user}:{self.redis_password}@{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
 
-env_settings = EnvSettings()  # type: ignore
+@lru_cache
+def get_env_settings() -> "EnvSettings":
+    return EnvSettings()  # type: ignore

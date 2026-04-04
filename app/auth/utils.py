@@ -6,7 +6,7 @@ from datetime import datetime, timezone, timedelta
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.exceptions import InvalidSignature
 
-from app.shared.config.env import env_settings
+from app.shared.config.env import get_env_settings
 
 from .models import Subject
 from .enums import AccessLevel
@@ -33,7 +33,7 @@ def verify_login_challenge(
 
 def encode_subject_token(subject: Subject) -> str:
     moment = datetime.now(tz=timezone.utc) + timedelta(
-        seconds=env_settings.jwt_lifetime_sec
+        seconds=get_env_settings().jwt_lifetime_sec
     )
 
     data = {
@@ -42,6 +42,8 @@ def encode_subject_token(subject: Subject) -> str:
         "confidentiality_level": subject.confidentiality_level.value,
         "integrity_levels": [level.value for level in subject.integrity_levels],
     }
+    env_settings = get_env_settings()
+
     return jwt.encode(
         data, env_settings.jwt_secret, algorithm=env_settings.jwt_algorithm
     )
@@ -49,9 +51,12 @@ def encode_subject_token(subject: Subject) -> str:
 
 def decode_subject_token(token: str) -> Subject | None:
     try:
+        env_settings = get_env_settings()
+
         payload = jwt.decode(
             token, env_settings.jwt_secret, algorithms=[env_settings.jwt_algorithm]
         )
+
         return Subject(
             id=payload["subject_id"],
             confidentiality_level=AccessLevel(payload["confidentiality_level"]),

@@ -10,13 +10,13 @@ from app.audit.router import router as audit_router
 from app.pdf_to_audio.router import router as pdf_to_audio_router
 from app.submission.router import router as submission_router
 from app.admin.router import router as admin_router
-from app.shared.config.env import env_settings
+from app.shared.config.env import get_env_settings
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     redis = aioredis.from_url(
-        env_settings.redis_url, encoding="utf-8", decode_responses=True
+        get_env_settings().redis_url, encoding="utf-8", decode_responses=True
     )
     FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
     yield
