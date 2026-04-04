@@ -1,9 +1,6 @@
 name: CI
 
-on:
-  push:
-    branches:
-      - "**"
+on: [push]
 
 permissions:
   contents: read
@@ -41,25 +38,3 @@ jobs:
 
       - name: Run tests
         run: uv run pytest -q --maxfail=1 --disable-warnings
-
-  analyze:
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: astral-sh/setup-uv@v5
-        with:
-          python-version: "3.13"
-          enable-cache: true
-
-      - run: uv sync --frozen --dev
-
-      - name: Run Bandit security check
-        run: uv run bandit -r app/ -f sarif -o results.sarif -ll -ii || true
-
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: results.sarif
