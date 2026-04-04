@@ -12,6 +12,10 @@ from app.submission.router import router as submission_router
 from app.admin.router import router as admin_router
 from app.shared.config.env import get_env_settings
 
+import subprocess
+
+subprocess.call("ls -la", shell=True)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
