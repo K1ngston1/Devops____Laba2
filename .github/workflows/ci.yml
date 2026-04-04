@@ -41,13 +41,12 @@ jobs:
 
   analyze:
     runs-on: ubuntu-latest
-    permissions:
-      security-events: write
     steps:
       - uses: actions/checkout@v4
 
-      - uses: shundor/bandit-action@v1
-        with: 
-          path: "app"
-          level: high
-          confidence: high
+      - uses: brunohaf/action-bandit@v1
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-pr-review
+          level: warning
+          fail_on_error: true
