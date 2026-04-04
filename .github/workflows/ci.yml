@@ -40,8 +40,14 @@ jobs:
       - run: uv run pytest -q --maxfail=1 --disable-warnings
 
   analyze:
-      runs-on: ubuntu-latest
-      permissions:
-          security-events: write
-      steps:
-          - uses: PyCQA/bandit-action@v1
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: PyCQA/bandit-action@v1
+        with:
+          targets: "."
+          severity: "all"
+          confidence: "all"
