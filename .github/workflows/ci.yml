@@ -48,5 +48,5 @@ jobs:
         uses: PyCQA/bandit-action@v1
         with:
           python-version: "3.13"
-          severity: medium
-          confidence: medium
+          severity: low
+          confidence: low
