@@ -563,6 +563,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "pyjwt" },
     { name = "pymupdf" },
+    { name = "pytest" },
     { name = "sqlalchemy" },
 ]
 
@@ -587,6 +588,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.10.1" },
     { name = "pyjwt", specifier = ">=2.10.1" },
     { name = "pymupdf", specifier = ">=1.25.2" },
+    { name = "pytest", specifier = ">=8.4.2" },
     { name = "sqlalchemy", specifier = ">=2.0.43" },
 ]
 
