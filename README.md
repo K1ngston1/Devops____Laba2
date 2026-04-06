@@ -18,7 +18,7 @@ Start `minikube`
 minikube start
 ```
 
-`kubectl` are now configured to use the minikube by default.
+`kubectl` is now configured to use the minikube by default.
 
 Enable Ingress addon:
 
