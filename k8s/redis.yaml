@@ -24,6 +24,15 @@ spec:
                 secretKeyRef:
                   key: REDIS_PASSWORD
                   name: hmp-secret
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "-a", "$(REDIS_PASSWORD)", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "-a", "$(REDIS_PASSWORD)", "ping"]
+            periodSeconds: 15
 
 ---
 

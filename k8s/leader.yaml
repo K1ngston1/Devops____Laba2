@@ -22,6 +22,17 @@ spec:
                 name: hmp-config
             - secretRef:
                 name: hmp-secret
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 15
 
 ---
 

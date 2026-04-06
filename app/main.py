@@ -12,13 +12,9 @@ from app.submission.router import router as submission_router
 from app.admin.router import router as admin_router
 from app.shared.config.env import get_env_settings
 
-import subprocess
-
-subprocess.call("ls -la", shell=True)
-
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     redis = aioredis.from_url(
         get_env_settings().redis_url, encoding="utf-8", decode_responses=True
     )
