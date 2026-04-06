@@ -6,8 +6,21 @@ services:
     container_name: hmp-api
     env_file: .env
     environment:
-      - POSTGRES_HOST=postgres
-      - REDIS_HOST=redis
+      JWT_SECRET: 4jez3Ruh5sbVMChP
+      JWT_ALGORITHM: HS256
+      JWT_LIFETIME_SEC: 90000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_USER: default
+      REDIS_PASSWORD: password
+      REDIS_DB: 0
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: hmp-postgres
+      # For dbmate migrations
+      DATABASE_URL: postgres://user:password@postgres:5432/hmp-postgres?sslmode=disable
     ports:
       - "8000:8000"
     volumes:
@@ -23,7 +36,10 @@ services:
   postgres:
     image: postgres:latest
     container_name: hmp-postgres
-    env_file: .env
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: hmp-postgres
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -40,7 +56,8 @@ services:
     volumes:
       - redis_data:/data
     restart: unless-stopped
-    env_file: .env
+    environment:
+      REDIS_PASSWORD: password
 
   pgadmin:
     image: dpage/pgadmin4:latest
