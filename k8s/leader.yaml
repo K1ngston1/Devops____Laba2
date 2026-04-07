@@ -3,10 +3,10 @@ kind: Deployment
 metadata:
   name: leader
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app: leader
-  replicas: 1
   template:
     metadata:
       labels:
@@ -41,8 +41,8 @@ kind: Service
 metadata:
   name: leader
 spec:
-  selector:
-    app: leader
   ports:
     - port: 80
       targetPort: 8000
+  selector:
+    app: leader

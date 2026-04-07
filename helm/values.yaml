@@ -1,0 +1,43 @@
+replicaCount: 1
+
+image:
+  repository: staleread/hmp-api
+  tag: "latest"
+
+containerPort: 8000
+
+service:
+  port: 80
+
+ingress:
+  enabled: true
+  hosts:
+    - paths:
+        - path: /
+          pathType: Prefix
+
+envFrom:
+  - configMapRef:
+      name: hmp-config
+  - secretRef:
+      name: hmp-secret
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 5
+  periodSeconds: 15
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  periodSeconds: 15
+
+postgresql:
+  auth:
+    username: user
+    password: password
+    database: hmp-postgres
+redis:
+  password: password
