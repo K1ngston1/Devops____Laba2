@@ -16,24 +16,7 @@ from typing import Optional
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 
-def sign_challenge(challenge_b64: str, private_key_hex: str) -> str:
-    """
-    Sign a challenge using Ed25519 private key
 
-    Args:
-        challenge_b64: Base64 encoded challenge
-        private_key_hex: Hex encoded private key (64 chars)
-
-    Returns:
-        Base64 encoded signature
-    """
-    challenge_bytes = base64.b64decode(challenge_b64)
-    private_key_bytes = bytes.fromhex(private_key_hex)
-
-    private_key = Ed25519PrivateKey.from_private_bytes(private_key_bytes)
-    signature = private_key.sign(challenge_bytes)
-
-    return base64.b64encode(signature).decode("utf-8")
 
 
 def authenticate(client, user_id: int, private_key_hex: str) -> Optional[str]:

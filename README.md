@@ -1,122 +1,91 @@
 # hmp-server
+# security bandit
 
-[![security: bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
+The backend for HearMyPaper
 
-The backend for [HearMyPaper](https://github.com/staleread/hearmypaper)
+## Встановлення на Windows
+
+### Передумови
+1. Встановіть Docker Desktop: https://www.docker.com/products/docker-desktop/
+2. Увімкніть в Docker Desktop WSL 2 backend
+3. Встановіть WSL2: `wsl --install` (від адміністратора)
+4. Перезавантажте комп'ютер
 
 ## kubectl setup
 
-Install deps
+### Встановлення залежностей
 
-```bash
-sudo pacman -S minikube kubectl
-```
+**Відкрийте PowerShell від імені адміністратора та виконайте:**
 
-Start `minikube`
 
-```bash
-minikube start
-```
+# 1. Спочатку знайдіть де встановлено Chocolatey
+# Зазвичай це: C:\ProgramData\chocolatey
 
-`kubectl` is now configured to use the minikube by default.
+# 2. Додайте Chocolatey в PATH (виконайте в PowerShell)
+$env:Path += ";C:\ProgramData\chocolatey\bin"
 
-Enable Ingress addon:
+# 3. Перевірте що choco працює
+choco --version
 
-```bash
+# 4. Тепер встановіть minikube та kubectl
+choco install minikube kubernetes-cli -y
+
+# 5. Встановіть helm
+choco install kubernetes-helm -y
+
+
+```powershell
+# Встановлення Chocolatey (якщо ще не встановлено)
+Set-ExecutionPolicy Bypass -Scope Process -Force
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+# Встановлення minikube та kubectl
+choco install minikube kubernetes-cli -y
+
+# Встановлення helm
+choco install kubernetes-helm -y
+
+# Запуск minikube з драйвером docker
+minikube start --driver=docker
+
+# Перевірка що kubectl налаштовано на minikube
+kubectl config use-context minikube
+
+
 minikube addons enable ingress
-```
 
-Apply the manifests
 
-```bash
 kubectl apply -f k8s/
-```
 
-Check for the pods being started (run for a few times)
-
-```bash
+# Запустіть кілька разів, поки статус не стане "Running"
 kubectl get pods
-```
 
-Get the IP address Ingress is listening to:
+# Отримати IP
+minikube ip
 
-```bash
-kubectl describe ingress hmp-ingress | grep Address
-```
+# Або через describe ingress
+kubectl describe ingress hmp-ingress
 
-Open `http://<IP_address>/docs` in your browser. You should see OpenAPI docs
+# Отримати IP та відкрити в браузері
+$INGRESS_IP = minikube ip
+Start-Process "http://${INGRESS_IP}/docs"
 
-### Cleanup
 
-```bash
+#Oчищення 
 kubectl delete -f k8s/
-```
 
-## Helm setup
+#Helm setup
+Застосування prerequisites (ConfigMap та Secret)
 
-Install deps
-
-```bash
-sudo pacman -S helm
-```
-
-Apply the prerequisites (ConfigMap and Secret):
-
-```bash
-kubectl apply -f k8s/config.yaml
+#kubectl apply -f k8s/config.yaml
 kubectl apply -f k8s/secret.yaml
-```
 
-Pull chart dependencies (bitnami/postgresql, bitnami/redis):
+#helm dependency update helm/
 
-```bash
-helm dependency update helm/
-```
+#kubectl get pods -w
 
-Install the chart:
-
-```bash
-helm install hearmypaper helm/
-```
-
-Check for the pods being started (run a few times):
-
-```bash
-kubectl get pods
-```
-
-Get the IP address Ingress is listening to:
-
-```bash
-kubectl describe ingress hearmypaper | grep Address
-```
-
-Open `http://<IP_address>/docs` in your browser. You should see OpenAPI docs
-
-### Upgrade and rollback
-
-Change replica count (or any other value) without editing files:
-
-```bash
-helm upgrade hearmypaper helm/ --set replicaCount=2
-```
-
-Roll back to the previous revision:
-
-```bash
-helm rollback hearmypaper
-```
-
-List revision history:
-
-```bash
-helm history hearmypaper
-```
-
-### Cleanup
-
-```bash
-helm uninstall hearmypaper
-kubectl delete -f k8s/config.yaml
-kubectl delete -f k8s/secret.yaml
-```
+#Отримання IP адреси Ingress
+$INGRESS_IP = minikube ip
+Write-Host "Ingress IP: $INGRESS_IP"
+Start-Process "http://${INGRESS_IP}/docs"
