@@ -221,5 +221,8 @@ __marimo__/
 # Secrets
 secrets/
 
+# Helm chart dependencies
+helm/charts/*.tgz
+
 # Locust data
 locust/data/

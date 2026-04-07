@@ -1,0 +1,16 @@
+apiVersion: v2
+name: hearmypaper
+description: backend for HearMyPaper
+
+type: application
+version: 0.1.0
+appVersion: "1.1.0"
+
+dependencies:
+  - name: postgresql
+    version: "18.x.x"
+    repository: https://charts.bitnami.com/bitnami
+  - name: redis
+    version: "25.x.x"
+    repository: https://charts.bitnami.com/bitnami
+
