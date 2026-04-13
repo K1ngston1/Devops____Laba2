@@ -1,91 +1,71 @@
-# hmp-server
-# security bandit
+# DevOps Lab 2 — Kubernetes + Helm + Minikube
 
-The backend for HearMyPaper
+## 📌 Опис проєкту
 
-## Встановлення на Windows
+Ця лабораторна робота демонструє розгортання мікросервісної архітектури в Kubernetes (Minikube) з використанням Helm, Ingress, PostgreSQL та Redis.
 
-### Передумови
-1. Встановіть Docker Desktop: https://www.docker.com/products/docker-desktop/
-2. Увімкніть в Docker Desktop WSL 2 backend
-3. Встановіть WSL2: `wsl --install` (від адміністратора)
-4. Перезавантажте комп'ютер
+---
 
-## kubectl setup
+## 🧱 Використані технології
 
-### Встановлення залежностей
+- Kubernetes (Minikube)
+- Helm
+- Docker Desktop
+- Nginx Ingress Controller
+- FastAPI (backend)
+- PostgreSQL (Bitnami chart)
+- Redis (Bitnami chart)
+- kubectl
 
-**Відкрийте PowerShell від імені адміністратора та виконайте:**
+---
 
+## 🚀 1. Встановлення інструментів
 
-# 1. Спочатку знайдіть де встановлено Chocolatey
-# Зазвичай це: C:\ProgramData\chocolatey
-
-# 2. Додайте Chocolatey в PATH (виконайте в PowerShell)
-$env:Path += ";C:\ProgramData\chocolatey\bin"
-
-# 3. Перевірте що choco працює
-choco --version
-
-# 4. Тепер встановіть minikube та kubectl
-choco install minikube kubernetes-cli -y
-
-# 5. Встановіть helm
-choco install kubernetes-helm -y
-
+### Встановлення через winget (Windows):
 
 ```powershell
-# Встановлення Chocolatey (якщо ще не встановлено)
-Set-ExecutionPolicy Bypass -Scope Process -Force
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+winget install Kubernetes.minikube
+winget install Kubernetes.kubectl
+winget install Helm.Helm
 
-# Встановлення minikube та kubectl
-choco install minikube kubernetes-cli -y
+# Minikube
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
 
-# Встановлення helm
-choco install kubernetes-helm -y
+# kubectl
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/
 
-# Запуск minikube з драйвером docker
+# Helm
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+chmod 700 get_helm.sh
+./get_helm.sh
+
 minikube start --driver=docker
 
-# Перевірка що kubectl налаштовано на minikube
-kubectl config use-context minikube
+minikube status
 
 
 minikube addons enable ingress
+kubectl get pods -n ingress-nginx
 
-
+kubectl apply -f k8s/config.yaml
+kubectl apply -f k8s/secret.yaml
 kubectl apply -f k8s/
 
-# Запустіть кілька разів, поки статус не стане "Running"
+
 kubectl get pods
+kubectl get svc
+kubectl get ingress
 
-# Отримати IP
+
+helm dependency update helm/
+helm install hearmypaper helm/
+helm list
+
+kubectl describe ingress hearmypaper
+minikube tunnel
 minikube ip
-
-# Або через describe ingress
-kubectl describe ingress hmp-ingress
-
-# Отримати IP та відкрити в браузері
-$INGRESS_IP = minikube ip
-Start-Process "http://${INGRESS_IP}/docs"
-
-
-#Oчищення 
-kubectl delete -f k8s/
-
-#Helm setup
-Застосування prerequisites (ConfigMap та Secret)
-
-#kubectl apply -f k8s/config.yaml
-kubectl apply -f k8s/secret.yaml
-
-#helm dependency update helm/
-
-#kubectl get pods -w
-
-#Отримання IP адреси Ingress
-$INGRESS_IP = minikube ip
-Write-Host "Ingress IP: $INGRESS_IP"
-Start-Process "http://${INGRESS_IP}/docs"
+kubectl get all
+```
